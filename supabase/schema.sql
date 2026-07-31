@@ -16,6 +16,7 @@ create table if not exists public.questions (
   question_prompt text not null,
   choices jsonb not null check (jsonb_typeof(choices) = 'array'),
   image_url text,
+  timer_seconds integer check (timer_seconds is null or timer_seconds > 0),
   expected_answer text not null,
   points integer not null default 100 check (points >= 0),
   active_date date unique,
@@ -27,6 +28,7 @@ alter table public.questions add column if not exists stimulus text;
 alter table public.questions add column if not exists question_prompt text;
 alter table public.questions add column if not exists choices jsonb;
 alter table public.questions add column if not exists image_url text;
+alter table public.questions add column if not exists timer_seconds integer;
 
 -- The first draft used a single `prompt` column. If it exists, make it
 -- optional so new rows can use `stimulus` and `question_prompt`.
@@ -85,6 +87,7 @@ declare
   selected_question public.questions%rowtype;
   answer_is_correct boolean;
   awarded_points integer;
+  answer_explanations jsonb;
 begin
   select *
     into selected_question
@@ -98,6 +101,12 @@ begin
   answer_is_correct :=
     lower(trim(p_answer)) = lower(trim(selected_question.expected_answer));
   awarded_points := case when answer_is_correct then selected_question.points else 0 end;
+  select coalesce(
+    jsonb_object_agg(choice->>'label', choice->>'explanation'),
+    '{}'::jsonb
+  )
+    into answer_explanations
+    from jsonb_array_elements(selected_question.choices) as choice;
 
   begin
     insert into public.attempts (
@@ -127,7 +136,8 @@ begin
   return jsonb_build_object(
     'correct', answer_is_correct,
     'pointsAwarded', awarded_points,
-    'correctAnswer', selected_question.expected_answer
+    'correctAnswer', selected_question.expected_answer,
+    'explanations', answer_explanations
   );
 end;
 $$;
@@ -137,14 +147,16 @@ grant execute on function public.submit_answer(text, text, text) to service_role
 
 -- Example question (replace with your real SAT question):
 -- insert into public.questions (
---   id, stimulus, question_prompt, choices, expected_answer, points, active_date
+--   id, stimulus, question_prompt, choices, expected_answer, points, active_date,
+--   timer_seconds
 -- )
 -- values (
 --   '2026-07-30',
 --   'If 3x + 2 = 14, what is the value of x?',
 --   'Which choice is the correct answer?',
---   '[{"label":"A","text":"2"},{"label":"B","text":"3"},{"label":"C","text":"4"},{"label":"D","text":"6"}]',
+--   '[{"label":"A","text":"2","explanation":"Too small."},{"label":"B","text":"3","explanation":"Substitution gives 11."},{"label":"C","text":"4","explanation":"3(4) + 2 = 14."},{"label":"D","text":"6","explanation":"Too large."}]',
 --   'C',
 --   100,
---   '2026-07-30'
+--   '2026-07-30',
+--   80
 -- );

@@ -28,7 +28,17 @@
     }
 
     .section-title { font-size: .95rem; font-weight: 600; }
-    .header-date { text-align: center; font-size: .9rem; color: #555; }
+    .header-center { text-align: center; color: #555; }
+    .header-date { font-size: .78rem; }
+    .timer-display {
+      margin-top: .2rem;
+      color: #222;
+      font-size: 1.2rem;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+    }
+    .timer-display[hidden] { display: none; }
+    .timer-display.warning { color: #c62828; }
 
     .user-profile {
       justify-self: end;
@@ -222,6 +232,17 @@
 
     .choice-text { font-size: .87rem; line-height: 1.4; }
 
+    .choice-explanation {
+      display: none;
+      margin: .1rem .2rem .35rem 2.65rem;
+      color: #555;
+      font-size: .8rem;
+      line-height: 1.4;
+    }
+
+    .choice-explanation.visible { display: block; }
+    .choice-explanation.correct { color: #18794e; }
+
     .eliminate-choice {
       width: 30px;
       height: 30px;
@@ -297,7 +318,10 @@
 <body>
   <header class="test-header">
     <div class="section-title">SAT Question of the Day</div>
-    <div class="header-date" id="dateDisplay"></div>
+    <div class="header-center">
+      <div class="header-date" id="dateDisplay"></div>
+      <div class="timer-display" id="timerDisplay" hidden></div>
+    </div>
     <div class="user-profile" id="userProfile"></div>
   </header>
 
@@ -349,11 +373,14 @@
         { label: 'D', text: 'Answer choice D' }
       ],
       imageUrl: null,
+      timeLimitSeconds: 80,
       demo: true
     };
 
     let currentQuestion = null;
     let selectedAnswer = null;
+    let timerInterval = null;
+    let timeRemaining = null;
 
     const escapeHtml = (value) => {
       const node = document.createElement('span');
@@ -413,10 +440,13 @@
         const row = document.createElement('div');
         row.className = 'choice-row';
         row.innerHTML = `
-          <button class="choice-option" type="button" data-answer="${escapeHtml(choice.label)}">
-            <span class="choice-letter">${escapeHtml(choice.label)}</span>
-            <span class="choice-text">${escapeHtml(choice.text)}</span>
-          </button>
+          <div style="flex: 1">
+            <button class="choice-option" type="button" data-answer="${escapeHtml(choice.label)}" style="width: 100%">
+              <span class="choice-letter">${escapeHtml(choice.label)}</span>
+              <span class="choice-text">${escapeHtml(choice.text)}</span>
+            </button>
+            <div class="choice-explanation" data-explanation="${escapeHtml(choice.label)}"></div>
+          </div>
           <button class="eliminate-choice" type="button" aria-label="Eliminate ${escapeHtml(choice.label)}">×</button>
         `;
 
@@ -432,6 +462,40 @@
         });
         choices.appendChild(row);
       });
+
+      startTimer(question.timeLimitSeconds);
+    }
+
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      const display = document.getElementById('timerDisplay');
+      if (!Number.isInteger(seconds) || seconds <= 0) {
+        display.hidden = true;
+        return;
+      }
+
+      timeRemaining = seconds;
+      display.hidden = false;
+
+      const update = () => {
+        const minutes = Math.floor(timeRemaining / 60);
+        const remainingSeconds = timeRemaining % 60;
+        display.textContent = `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+        display.classList.toggle('warning', timeRemaining <= 15);
+
+        if (timeRemaining <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById('submitBtn').disabled = true;
+          document.querySelectorAll('.choice-option, .eliminate-choice')
+            .forEach((item) => { item.disabled = true; });
+          setStatus('Time is up. Your answer was not submitted.', 'error');
+          return;
+        }
+        timeRemaining -= 1;
+      };
+
+      update();
+      timerInterval = setInterval(update, 1000);
     }
 
     function selectAnswer(option, answer) {
@@ -471,6 +535,7 @@
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Could not submit answer');
 
+        clearInterval(timerInterval);
         setStatus(
           result.correct
             ? `Correct! +${result.pointsAwarded} points`
@@ -479,6 +544,14 @@
         );
         document.querySelectorAll('.choice-option, .eliminate-choice')
           .forEach((item) => { item.disabled = true; });
+        Object.entries(result.explanations || {}).forEach(([label, explanation]) => {
+          const explanationElement =
+            document.querySelector(`[data-explanation="${CSS.escape(label)}"]`);
+          if (!explanationElement) return;
+          explanationElement.textContent = `${label}: ${explanation}`;
+          explanationElement.classList.add('visible');
+          if (label === result.correctAnswer) explanationElement.classList.add('correct');
+        });
       } catch (error) {
         setStatus(error.message, 'error');
         button.disabled = false;

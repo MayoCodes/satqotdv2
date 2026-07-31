@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAT QOTD Developer Editor</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f4f6fa;
+      color: #1f2937;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { width: min(960px, calc(100% - 2rem)); margin: 2rem auto 4rem; }
+    h1 { margin-bottom: .35rem; }
+    .subtitle { margin-top: 0; color: #64748b; }
+    .card {
+      margin-top: 1.25rem;
+      padding: 1.4rem;
+      border: 1px solid #dbe1ea;
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 5px 20px rgba(15, 23, 42, .05);
+    }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .full { grid-column: 1 / -1; }
+    label { display: block; margin-bottom: .4rem; font-size: .86rem; font-weight: 700; }
+    input, textarea, select {
+      width: 100%;
+      padding: .72rem .8rem;
+      border: 1px solid #b9c2d0;
+      border-radius: 8px;
+      background: #fff;
+      color: #111827;
+      font: inherit;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .choice-card {
+      display: grid;
+      grid-template-columns: 55px 1fr 1fr;
+      gap: .8rem;
+      align-items: start;
+      margin-top: .8rem;
+      padding: 1rem;
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+    .choice-card textarea { min-height: 85px; }
+    .actions { display: flex; align-items: center; gap: 1rem; margin-top: 1.2rem; }
+    button {
+      padding: .75rem 1.35rem;
+      border: 0;
+      border-radius: 9px;
+      background: #4169e1;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    #status { font-size: .9rem; }
+    #status.error { color: #b42318; }
+    #status.success { color: #18794e; font-weight: 700; }
+    .notice {
+      padding: .8rem 1rem;
+      border-left: 4px solid #d97706;
+      background: #fffbeb;
+      color: #78350f;
+      font-size: .86rem;
+      line-height: 1.5;
+    }
+    @media (max-width: 720px) {
+      .grid, .choice-card { grid-template-columns: 1fr; }
+      .full { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Daily Question Editor</h1>
+    <p class="subtitle">Create or update the question shown on a specific day.</p>
+
+    <div class="notice">
+      This page can be opened by anyone who knows its URL, but saving requires your private
+      developer key. Never share that key or include it in screenshots.
+    </div>
+
+    <form class="card" id="questionForm">
+      <div class="grid">
+        <div class="full">
+          <label for="adminKey">Developer key</label>
+          <input id="adminKey" type="password" autocomplete="off" required>
+        </div>
+        <div>
+          <label for="activeDate">Display date</label>
+          <input id="activeDate" type="date" required>
+        </div>
+        <div>
+          <label for="questionId">Question ID</label>
+          <input id="questionId" type="text" required placeholder="2026-07-30-math">
+        </div>
+        <div>
+          <label for="points">Points</label>
+          <input id="points" type="number" min="0" step="1" value="100" required>
+        </div>
+        <div>
+          <label for="timerSeconds">Time limit in seconds</label>
+          <input id="timerSeconds" type="number" min="1" step="1" placeholder="Leave blank for no timer">
+        </div>
+        <div class="full">
+          <label for="stimulus">Passage or main question text</label>
+          <textarea id="stimulus" required></textarea>
+        </div>
+        <div class="full">
+          <label for="prompt">Answer prompt</label>
+          <textarea id="prompt" required placeholder="Which choice best answers the question?"></textarea>
+        </div>
+        <div class="full">
+          <label for="imageUrl">Optional question image URL</label>
+          <input id="imageUrl" type="url" placeholder="https://...">
+        </div>
+      </div>
+
+      <h2>Answer choices</h2>
+      <div id="choices"></div>
+
+      <div class="grid" style="margin-top: 1rem">
+        <div>
+          <label for="correctAnswer">Correct answer</label>
+          <select id="correctAnswer" required>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="saveBtn" type="submit">Save Question</button>
+        <span id="status" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const labels = ['A', 'B', 'C', 'D'];
+    const choicesContainer = document.getElementById('choices');
+
+    labels.forEach((label) => {
+      const card = document.createElement('div');
+      card.className = 'choice-card';
+      card.innerHTML = `
+        <div>
+          <label>Choice</label>
+          <input value="${label}" disabled>
+        </div>
+        <div>
+          <label for="choice-${label}">Choice ${label} text</label>
+          <textarea id="choice-${label}" required></textarea>
+        </div>
+        <div>
+          <label for="explanation-${label}">Why ${label} is correct or incorrect</label>
+          <textarea id="explanation-${label}" required></textarea>
+        </div>
+      `;
+      choicesContainer.appendChild(card);
+    });
+
+    const today = new Date();
+    const localDate = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0')
+    ].join('-');
+    document.getElementById('activeDate').value = localDate;
+    document.getElementById('questionId').value = `${localDate}-question`;
+    document.getElementById('adminKey').value = sessionStorage.getItem('devAdminKey') || '';
+
+    document.getElementById('activeDate').addEventListener('change', (event) => {
+      document.getElementById('questionId').value = `${event.target.value}-question`;
+    });
+
+    document.getElementById('questionForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.getElementById('saveBtn');
+      const status = document.getElementById('status');
+      const adminKey = document.getElementById('adminKey').value;
+      const timerValue = document.getElementById('timerSeconds').value;
+
+      button.disabled = true;
+      status.className = '';
+      status.textContent = 'Saving…';
+
+      const payload = {
+        id: document.getElementById('questionId').value,
+        activeDate: document.getElementById('activeDate').value,
+        stimulus: document.getElementById('stimulus').value,
+        prompt: document.getElementById('prompt').value,
+        imageUrl: document.getElementById('imageUrl').value,
+        points: Number(document.getElementById('points').value),
+        timerSeconds: timerValue ? Number(timerValue) : null,
+        expectedAnswer: document.getElementById('correctAnswer').value,
+        choices: labels.map((label) => ({
+          label,
+          text: document.getElementById(`choice-${label}`).value,
+          explanation: document.getElementById(`explanation-${label}`).value
+        }))
+      };
+
+      try {
+        const response = await fetch('/api/dev/questions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': adminKey
+          },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not save question');
+
+        sessionStorage.setItem('devAdminKey', adminKey);
+        status.className = 'success';
+        status.textContent = `Saved ${result.question.id} for ${result.question.active_date}.`;
+      } catch (error) {
+        status.className = 'error';
+        status.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

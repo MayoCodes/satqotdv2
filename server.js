@@ -108,12 +108,29 @@ function discordAvatar(user) {
   return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
 }
 
+function adminKeyIsValid(req) {
+  const configuredKey = process.env.DEV_ADMIN_KEY;
+  const providedKey = req.get('x-admin-key');
+  if (!configuredKey || !providedKey) return false;
+
+  const configured = Buffer.from(configuredKey);
+  const provided = Buffer.from(providedKey);
+  return (
+    configured.length === provided.length &&
+    crypto.timingSafeEqual(configured, provided)
+  );
+}
+
 app.get('/', (req, res) => {
   res.sendFile(`${__dirname}/index.html`);
 });
 
 app.get('/qotd.html', (req, res) => {
   res.sendFile(`${__dirname}/qotd.html`);
+});
+
+app.get('/dev.html', (req, res) => {
+  res.sendFile(`${__dirname}/dev.html`);
 });
 
 app.get('/auth/discord', (req, res) => {
@@ -237,7 +254,7 @@ app.get('/api/question/today', async (req, res) => {
 
   const { data, error } = await supabase
     .from('questions')
-    .select('id, stimulus, question_prompt, choices, image_url')
+    .select('id, stimulus, question_prompt, choices, image_url, timer_seconds')
     .eq('active_date', today)
     .maybeSingle();
 
@@ -252,10 +269,91 @@ app.get('/api/question/today', async (req, res) => {
       id: data.id,
       stimulus: data.stimulus,
       prompt: data.question_prompt,
-      choices: data.choices,
+      choices: data.choices.map(({ label, text }) => ({ label, text })),
       imageUrl: data.image_url,
+      timeLimitSeconds: data.timer_seconds,
     },
   });
+});
+
+app.post('/api/dev/questions', async (req, res) => {
+  if (!adminKeyIsValid(req)) return res.status(401).json({ error: 'Invalid developer key' });
+  if (!supabase) return res.status(503).json({ error: 'Database is not configured' });
+
+  const {
+    id,
+    stimulus,
+    prompt,
+    choices,
+    expectedAnswer,
+    points,
+    activeDate,
+    timerSeconds,
+    imageUrl,
+  } = req.body;
+
+  const validChoices =
+    Array.isArray(choices) &&
+    choices.length >= 2 &&
+    choices.every(
+      (choice) =>
+        typeof choice.label === 'string' &&
+        typeof choice.text === 'string' &&
+        typeof choice.explanation === 'string' &&
+        choice.label.trim() &&
+        choice.text.trim()
+    );
+  const labels = validChoices ? choices.map((choice) => choice.label.trim()) : [];
+
+  if (
+    typeof id !== 'string' ||
+    !id.trim() ||
+    typeof stimulus !== 'string' ||
+    !stimulus.trim() ||
+    typeof prompt !== 'string' ||
+    !prompt.trim() ||
+    !validChoices ||
+    typeof expectedAnswer !== 'string' ||
+    !labels.includes(expectedAnswer) ||
+    typeof activeDate !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(activeDate)
+  ) {
+    return res.status(400).json({ error: 'Question fields are incomplete or invalid' });
+  }
+
+  const safePoints = Number.isInteger(points) && points >= 0 ? points : 100;
+  const safeTimer =
+    Number.isInteger(timerSeconds) && timerSeconds > 0 ? timerSeconds : null;
+
+  const { data, error } = await supabase
+    .from('questions')
+    .upsert(
+      {
+        id: id.trim(),
+        stimulus: stimulus.trim(),
+        question_prompt: prompt.trim(),
+        choices: choices.map((choice) => ({
+          label: choice.label.trim(),
+          text: choice.text.trim(),
+          explanation: choice.explanation.trim(),
+        })),
+        expected_answer: expectedAnswer,
+        points: safePoints,
+        active_date: activeDate,
+        timer_seconds: safeTimer,
+        image_url: typeof imageUrl === 'string' && imageUrl.trim() ? imageUrl.trim() : null,
+      },
+      { onConflict: 'id' }
+    )
+    .select('id, active_date, timer_seconds')
+    .single();
+
+  if (error) {
+    console.error('Developer question save failed:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json({ question: data });
 });
 
 app.post('/api/answers', async (req, res) => {
