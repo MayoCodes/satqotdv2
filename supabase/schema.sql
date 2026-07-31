@@ -28,6 +28,22 @@ alter table public.questions add column if not exists question_prompt text;
 alter table public.questions add column if not exists choices jsonb;
 alter table public.questions add column if not exists image_url text;
 
+-- The first draft used a single `prompt` column. If it exists, make it
+-- optional so new rows can use `stimulus` and `question_prompt`.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'questions'
+      and column_name = 'prompt'
+  ) then
+    alter table public.questions alter column prompt drop not null;
+  end if;
+end;
+$$;
+
 create table if not exists public.attempts (
   id bigint generated always as identity primary key,
   discord_id text not null references public.users(discord_id) on delete cascade,

@@ -263,6 +263,11 @@
     const formattedDate = today.toLocaleDateString('en-US', options);
     document.getElementById('date-display').textContent = formattedDate;
 
+    const restoreDate = () => {
+      const dateDisplay = document.getElementById('date-display');
+      if (dateDisplay) dateDisplay.textContent = formattedDate;
+    };
+
     // Check the signed server session.
     const checkUserStatus = async () => {
       try {
@@ -291,6 +296,7 @@
           ? '<p class="login-error">Discord login failed. Please try again.</p>'
           : ''}
       `;
+      restoreDate();
     };
 
     // Display welcome message and user profile
@@ -303,6 +309,7 @@
         <p class="date" id="current-date" style="font-size: 1.2rem; color: #5a6a8a; margin: 1rem 0;"></p>
         <button id="get-started-btn" class="btn-3d">Get Started</button>
       `;
+      restoreDate();
 
       // Add event listener to the button to redirect to qotd.html
       document.getElementById('get-started-btn').addEventListener('click', () => {
