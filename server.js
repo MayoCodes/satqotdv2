@@ -14,8 +14,17 @@ if (isProduction) {
 app.use(express.json());
 
 const supabase =
-  process.env.SUPABASE_URL && process.env.SUPABASE_KEY
-    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
+  process.env.SUPABASE_URL &&
+  (process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_KEY)
+    ? createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SECRET_KEY ||
+          process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.SUPABASE_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      )
     : null;
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -163,10 +172,18 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     res.cookie('sat_session', createSession(user), cookieOptions(7 * 24 * 60 * 60 * 1000));
 
-    // Keep the existing name collection working without making login depend on it.
+    // Create the account on first login and refresh mutable Discord profile fields.
     if (supabase) {
-      const { error } = await supabase.from('user_names').insert([{ name: user.name }]);
-      if (error) console.error('Could not save Discord name to Supabase:', error.message);
+      const { error } = await supabase.from('users').upsert(
+        {
+          discord_id: user.id,
+          display_name: user.name,
+          avatar_url: user.avatar,
+          last_login_at: new Date().toISOString(),
+        },
+        { onConflict: 'discord_id' }
+      );
+      if (error) console.error('Could not save Discord user to Supabase:', error.message);
     }
 
     res.redirect('/');
@@ -180,6 +197,59 @@ app.get('/api/me', (req, res) => {
   const session = readSession(req);
   if (!session) return res.status(401).json({ user: null });
   res.json({ user: session.user });
+});
+
+app.get('/api/leaderboard', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Database is not configured' });
+
+  const requestedLimit = Number.parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), 100)
+    : 25;
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('discord_id, display_name, avatar_url, total_score, questions_answered')
+    .order('total_score', { ascending: false })
+    .order('questions_answered', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Leaderboard query failed:', error.message);
+    return res.status(500).json({ error: 'Could not load leaderboard' });
+  }
+
+  res.json({ leaderboard: data });
+});
+
+app.post('/api/answers', async (req, res) => {
+  const session = readSession(req);
+  if (!session) return res.status(401).json({ error: 'Log in before answering' });
+  if (!supabase) return res.status(503).json({ error: 'Database is not configured' });
+
+  const { questionId, answer } = req.body;
+  if (typeof questionId !== 'string' || typeof answer !== 'string') {
+    return res.status(400).json({ error: 'questionId and answer are required' });
+  }
+
+  const { data, error } = await supabase.rpc('submit_answer', {
+    p_discord_id: session.user.id,
+    p_question_id: questionId,
+    p_answer: answer,
+  });
+
+  if (error) {
+    if (error.message.includes('already answered')) {
+      return res.status(409).json({ error: 'You already answered this question' });
+    }
+    if (error.message.includes('question not found')) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    console.error('Answer submission failed:', error.message);
+    return res.status(500).json({ error: 'Could not save answer' });
+  }
+
+  res.json(data);
 });
 
 app.post('/auth/logout', (req, res) => {
