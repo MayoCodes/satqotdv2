@@ -57,6 +57,14 @@ create table if not exists public.attempts (
   unique (discord_id, question_id)
 );
 
+create table if not exists public.question_sessions (
+  discord_id text not null references public.users(discord_id) on delete cascade,
+  question_id text not null references public.questions(id) on delete cascade,
+  started_at timestamptz not null default now(),
+  expires_at timestamptz,
+  primary key (discord_id, question_id)
+);
+
 create index if not exists users_leaderboard_idx
   on public.users (total_score desc, questions_answered desc);
 
@@ -66,12 +74,14 @@ create index if not exists attempts_user_idx
 alter table public.users enable row level security;
 alter table public.questions enable row level security;
 alter table public.attempts enable row level security;
+alter table public.question_sessions enable row level security;
 
 -- The website backend uses the service-role key. Browser clients receive no
 -- direct table access, preventing users from changing their own scores.
 revoke all on public.users from anon, authenticated;
 revoke all on public.questions from anon, authenticated;
 revoke all on public.attempts from anon, authenticated;
+revoke all on public.question_sessions from anon, authenticated;
 
 create or replace function public.submit_answer(
   p_discord_id text,
@@ -88,6 +98,7 @@ declare
   answer_is_correct boolean;
   awarded_points integer;
   answer_explanations jsonb;
+  question_session public.question_sessions%rowtype;
 begin
   select *
     into selected_question
@@ -96,6 +107,18 @@ begin
 
   if not found then
     raise exception 'question not found';
+  end if;
+
+  if selected_question.timer_seconds is not null then
+    select *
+      into question_session
+      from public.question_sessions
+      where discord_id = p_discord_id
+        and question_id = p_question_id;
+
+    if not found or question_session.expires_at <= now() then
+      raise exception 'time expired';
+    end if;
   end if;
 
   answer_is_correct :=
@@ -160,3 +183,6 @@ grant execute on function public.submit_answer(text, text, text) to service_role
 --   '2026-07-30',
 --   80
 -- );
+
+-- Make newly created/changed tables immediately visible to the Supabase API.
+notify pgrst, 'reload schema';

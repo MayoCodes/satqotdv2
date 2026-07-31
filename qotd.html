@@ -85,7 +85,7 @@
       min-height: 0;
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 4px 400px;
+      grid-template-columns: minmax(0, 55%) 4px minmax(360px, 1fr);
       background: #fff;
     }
 
@@ -381,6 +381,7 @@
     let selectedAnswer = null;
     let timerInterval = null;
     let timeRemaining = null;
+    let answerSubmitted = false;
 
     const escapeHtml = (value) => {
       const node = document.createElement('span');
@@ -415,6 +416,10 @@
         const response = await fetch('/api/question/today');
         if (!response.ok) throw new Error('No daily question');
         const { question } = await response.json();
+        if (question.alreadyAnswered) {
+          window.location.href = '/leaderboard.html';
+          return;
+        }
         renderQuestion(question);
       } catch {
         renderQuestion(fallbackQuestion);
@@ -469,12 +474,12 @@
     function startTimer(seconds) {
       clearInterval(timerInterval);
       const display = document.getElementById('timerDisplay');
-      if (!Number.isInteger(seconds) || seconds <= 0) {
+      if (seconds === null || seconds === undefined) {
         display.hidden = true;
         return;
       }
 
-      timeRemaining = seconds;
+      timeRemaining = Math.max(0, seconds);
       display.hidden = false;
 
       const update = () => {
@@ -489,6 +494,7 @@
           document.querySelectorAll('.choice-option, .eliminate-choice')
             .forEach((item) => { item.disabled = true; });
           setStatus('Time is up. Your answer was not submitted.', 'error');
+          makeLeaderboardButton();
           return;
         }
         timeRemaining -= 1;
@@ -514,6 +520,11 @@
     }
 
     document.getElementById('submitBtn').addEventListener('click', async () => {
+      if (answerSubmitted) {
+        window.location.href = '/leaderboard.html';
+        return;
+      }
+
       if (!selectedAnswer || currentQuestion.demo) {
         setStatus('This preview question cannot be submitted yet.', 'error');
         return;
@@ -552,11 +563,23 @@
           explanationElement.classList.add('visible');
           if (label === result.correctAnswer) explanationElement.classList.add('correct');
         });
+        makeLeaderboardButton();
       } catch (error) {
         setStatus(error.message, 'error');
-        button.disabled = false;
+        if (error.message.toLowerCase().includes('time expired')) {
+          makeLeaderboardButton();
+        } else {
+          button.disabled = false;
+        }
       }
     });
+
+    function makeLeaderboardButton() {
+      answerSubmitted = true;
+      const button = document.getElementById('submitBtn');
+      button.textContent = 'Show Leaderboard';
+      button.disabled = false;
+    }
 
     document.getElementById('bookmarkBtn').addEventListener('click', (event) => {
       event.currentTarget.classList.toggle('active');

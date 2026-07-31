@@ -121,6 +121,18 @@ function adminKeyIsValid(req) {
   );
 }
 
+async function syncSessionUser(user) {
+  return supabase.from('users').upsert(
+    {
+      discord_id: user.id,
+      display_name: user.name,
+      avatar_url: user.avatar,
+      last_login_at: new Date().toISOString(),
+    },
+    { onConflict: 'discord_id' }
+  );
+}
+
 app.get('/', (req, res) => {
   res.sendFile(`${__dirname}/index.html`);
 });
@@ -131,6 +143,10 @@ app.get('/qotd.html', (req, res) => {
 
 app.get('/dev.html', (req, res) => {
   res.sendFile(`${__dirname}/dev.html`);
+});
+
+app.get('/leaderboard.html', (req, res) => {
+  res.sendFile(`${__dirname}/leaderboard.html`);
 });
 
 app.get('/auth/discord', (req, res) => {
@@ -240,7 +256,15 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 app.get('/api/question/today', async (req, res) => {
+  const session = readSession(req);
+  if (!session) return res.status(401).json({ error: 'Log in before starting' });
   if (!supabase) return res.status(503).json({ error: 'Database is not configured' });
+
+  const { error: userError } = await syncSessionUser(session.user);
+  if (userError) {
+    console.error('Question user sync failed:', userError.message);
+    return res.status(500).json({ error: 'Could not sync your account' });
+  }
 
   const dateParts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
@@ -264,6 +288,51 @@ app.get('/api/question/today', async (req, res) => {
   }
   if (!data) return res.status(404).json({ error: 'No question is scheduled for today' });
 
+  const { data: priorAttempt, error: attemptError } = await supabase
+    .from('attempts')
+    .select('id')
+    .eq('discord_id', session.user.id)
+    .eq('question_id', data.id)
+    .maybeSingle();
+  if (attemptError) {
+    console.error('Attempt status query failed:', attemptError.message);
+    return res.status(500).json({ error: 'Could not check attempt status' });
+  }
+
+  let timeRemainingSeconds = null;
+  if (data.timer_seconds) {
+    const startedAt = new Date();
+    const expiresAt = new Date(startedAt.getTime() + data.timer_seconds * 1000);
+    const { error: startError } = await supabase.from('question_sessions').upsert(
+      {
+        discord_id: session.user.id,
+        question_id: data.id,
+        started_at: startedAt.toISOString(),
+        expires_at: expiresAt.toISOString(),
+      },
+      { onConflict: 'discord_id,question_id', ignoreDuplicates: true }
+    );
+    if (startError) {
+      console.error('Question timer start failed:', startError.message);
+      return res.status(500).json({ error: 'Could not start question timer' });
+    }
+
+    const { data: questionSession, error: sessionError } = await supabase
+      .from('question_sessions')
+      .select('expires_at')
+      .eq('discord_id', session.user.id)
+      .eq('question_id', data.id)
+      .single();
+    if (sessionError) {
+      console.error('Question timer query failed:', sessionError.message);
+      return res.status(500).json({ error: 'Could not load question timer' });
+    }
+    timeRemainingSeconds = Math.max(
+      0,
+      Math.ceil((new Date(questionSession.expires_at).getTime() - Date.now()) / 1000)
+    );
+  }
+
   res.json({
     question: {
       id: data.id,
@@ -271,7 +340,8 @@ app.get('/api/question/today', async (req, res) => {
       prompt: data.question_prompt,
       choices: data.choices.map(({ label, text }) => ({ label, text })),
       imageUrl: data.image_url,
-      timeLimitSeconds: data.timer_seconds,
+      timeLimitSeconds: timeRemainingSeconds,
+      alreadyAnswered: Boolean(priorAttempt),
     },
   });
 });
@@ -366,6 +436,21 @@ app.post('/api/answers', async (req, res) => {
     return res.status(400).json({ error: 'questionId and answer are required' });
   }
 
+  // A user may still have a valid Discord cookie from before the database
+  // tables were created. Ensure the referenced account exists before inserting
+  // an attempt so the foreign-key constraint cannot fail for that reason.
+  const { error: userError } = await syncSessionUser(session.user);
+
+  if (userError) {
+    console.error('Answer user sync failed:', {
+      code: userError.code,
+      message: userError.message,
+      details: userError.details,
+      hint: userError.hint,
+    });
+    return res.status(500).json({ error: 'Could not sync your account before saving' });
+  }
+
   const { data, error } = await supabase.rpc('submit_answer', {
     p_discord_id: session.user.id,
     p_question_id: questionId,
@@ -379,7 +464,15 @@ app.post('/api/answers', async (req, res) => {
     if (error.message.includes('question not found')) {
       return res.status(404).json({ error: 'Question not found' });
     }
-    console.error('Answer submission failed:', error.message);
+    if (error.message.includes('time expired')) {
+      return res.status(410).json({ error: 'Time expired before the answer was submitted' });
+    }
+    console.error('Answer submission failed:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
     return res.status(500).json({ error: 'Could not save answer' });
   }
 
