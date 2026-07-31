@@ -3,339 +3,523 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mayo's SAT QOTD - Question</title>
+  <title>Mayo's SAT Question of the Day</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      min-height: 100vh;
-      background: #f5f0d8;
+      height: 100vh;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      overflow: hidden;
+      background: #f8f9fa;
+      color: #333;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .test-header {
+      min-height: 74px;
+      padding: 1rem 2rem;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive, sans-serif;
-      overflow: hidden;
-      position: relative;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
     }
 
-    /* Floating question marks container */
-    .floating-marks {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 1;
+    .section-title { font-size: .95rem; font-weight: 600; }
+    .header-date { text-align: center; font-size: .9rem; color: #555; }
+
+    .user-profile {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-size: .85rem;
+      font-weight: 600;
     }
 
-    .question-mark {
-      position: absolute;
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: rgba(180, 180, 200, 0.5);
-      animation: floatUp linear infinite;
-      font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
-      /* Start from random positions */
-      top: 100vh;
-      left: 0;
+    .user-profile img {
+      width: 36px;
+      height: 36px;
+      object-fit: cover;
+      border-radius: 50%;
     }
 
-    @keyframes floatUp {
-      0% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 0.3;
-      }
-      10% {
-        opacity: 0.7;
-      }
-      90% {
-        opacity: 0.5;
-      }
-      100% {
-        transform: translateY(-100vh) rotate(360deg);
-        opacity: 0;
-      }
-    }
-
-    /* Main content */
-    .content {
-      text-align: center;
-      position: relative;
-      z-index: 10;
-      max-width: 700px;
-      width: 90%;
-      padding: 2rem;
-    }
-
-    .brand {
-      font-size: 1.8rem;
-      color: #2c5aa0;
-      font-weight: bold;
-      letter-spacing: 2px;
-      margin-bottom: 1rem;
-      display: inline-block;
-      transform: rotate(-2deg);
-    }
-
-    .title {
-      font-size: 4.5rem;
-      color: #1a2b5e;
-      font-weight: bold;
-      line-height: 1.1;
-      margin-bottom: 1.5rem;
-    }
-
-    .subtitle {
-      font-size: 1.4rem;
-      color: #5a6a8a;
-      margin-bottom: 3rem;
-      line-height: 1.4;
-    }
-
-    /* Hourglass animation */
-    .hourglass-container {
-      margin: 2rem 0;
-      position: relative;
-      width: 200px;
-      height: 300px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .hourglass {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      perspective: 1000px;
-    }
-
-    .hourglass-top, .hourglass-bottom {
-      position: absolute;
-      width: 100%;
-      height: 50%;
-      background: #2c5aa0;
-      border-radius: 50% 50% 0 0 / 50% 50% 0 0;
-      overflow: hidden;
-    }
-
-    .hourglass-top {
-      top: 0;
-      border-bottom: 2px solid #1a3a7a;
-    }
-
-    .hourglass-bottom {
-      bottom: 0;
-      border-top: 2px solid #1a3a7a;
-      border-radius: 0 0 50% 50% / 0 0 50% 50%;
-    }
-
-    .sand {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: #f5f0d8;
-      border-radius: 50% 50% 0 0 / 50% 50% 0 0;
-      animation: sand-fall 80s linear infinite;
-    }
-
-    .sand-top {
-      top: 0;
-      border-radius: 50% 50% 0 0 / 50% 50% 0 0;
-    }
-
-    .sand-bottom {
-      bottom: 0;
-      border-radius: 0 0 50% 50% / 0 0 50% 50%;
-    }
-
-    @keyframes sand-fall {
-      0% {
-        transform: translateY(0);
-      }
-      100% {
-        transform: translateY(100%);
-      }
-    }
-
-    .time-display {
-      font-size: 2rem;
-      color: #1a2b5e;
-      font-weight: bold;
-      margin: 2rem 0;
-    }
-
-    /* 3D Cartoony Button */
-    .btn-3d {
-      display: inline-block;
-      background: #2c5aa0;
+    .practice-banner {
+      padding: .42rem;
+      background: #3d5a96;
       color: #fff;
-      font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
-      font-size: 1.6rem;
-      font-weight: bold;
-      padding: 18px 50px;
-      border-radius: 16px;
-      border: 3px solid #1a3a7a;
-      box-shadow:
-        0 10px 0 #1a3a7a,
-        0 14px 20px rgba(0, 0, 0, 0.2);
-      cursor: pointer;
-      text-decoration: none;
-      transition: all 0.1s ease;
+      text-align: center;
+      font-size: .78rem;
+      font-weight: 700;
       letter-spacing: 1px;
-      margin-top: 2rem;
     }
 
-    .btn-3d:hover {
-      background: #3a6ab0;
-      transform: translateY(-2px);
-      box-shadow:
-        0 12px 0 #1a3a7a,
-        0 18px 24px rgba(0, 0, 0, 0.2);
+    .dotted-border {
+      height: 12px;
+      flex-shrink: 0;
+      background-image: repeating-linear-gradient(
+        to right,
+        #666 0,
+        #666 6px,
+        transparent 6px,
+        transparent 12px
+      );
+      background-position: 0 50%;
+      background-size: 12px 2px;
+      background-repeat: repeat-x;
     }
 
-    .btn-3d:active {
-      transform: translateY(8px);
-      box-shadow:
-        0 2px 0 #1a3a7a,
-        0 4px 8px rgba(0, 0, 0, 0.2);
+    .test-content {
+      min-height: 0;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 4px 400px;
+      background: #fff;
     }
 
-    @media (max-width: 600px) {
-      .title {
-        font-size: 2.8rem;
-      }
-      .brand {
-        font-size: 1.4rem;
-      }
-      .subtitle {
-        font-size: 1.1rem;
-      }
-      .btn-3d {
-        font-size: 1.3rem;
-        padding: 14px 36px;
-      }
-      .hourglass-container {
-        width: 150px;
-        height: 250px;
-      }
+    .question-area {
+      padding: 2rem 2.75rem;
+      overflow-y: auto;
+      background: #fff;
+    }
+
+    .question-content {
+      max-width: 760px;
+      margin: 0 auto;
+      color: #222;
+      font: 1.05rem/1.65 Georgia, "Times New Roman", serif;
+    }
+
+    .question-kicker {
+      margin-bottom: 1rem;
+      color: #666;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: .76rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .question-image {
+      display: block;
+      max-width: 100%;
+      max-height: 55vh;
+      margin: 1.25rem auto;
+      object-fit: contain;
+    }
+
+    .vertical-divider {
+      width: 4px;
+      position: relative;
+      background: #d0d0d0;
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    .vertical-divider:hover { background: #999; }
+
+    .answer-sidebar {
+      padding: 1.5rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+      background: #fafafa;
+    }
+
+    .question-header-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .question-number-badge {
+      padding: .4rem .7rem;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .tools { display: flex; align-items: center; gap: .65rem; }
+
+    .tool-btn {
+      border: 0;
+      background: transparent;
+      color: #666;
+      cursor: pointer;
+      font: inherit;
+      font-size: .82rem;
+    }
+
+    .tool-btn.active { color: #c41e3a; font-weight: 700; }
+
+    .eliminator {
+      padding: .25rem .42rem;
+      border-radius: 6px;
+      background: #4169e1;
+      color: #fff;
+      font-size: .7rem;
+      font-weight: 700;
+    }
+
+    .divider-line { height: 1px; background: #ddd; }
+
+    .question-prompt {
+      margin-bottom: .25rem;
+      color: #333;
+      font-size: .93rem;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    .answer-choices { display: flex; flex-direction: column; gap: .65rem; }
+
+    .choice-row { display: flex; align-items: center; gap: .5rem; }
+
+    .choice-option {
+      min-height: 52px;
+      padding: .8rem;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color .15s, background .15s;
+    }
+
+    .choice-option:hover { border-color: #4169e1; }
+    .choice-option.selected { border-color: #4169e1; background: #e8f0fe; }
+    .choice-option.eliminated { opacity: .48; }
+    .choice-option.eliminated .choice-text { text-decoration: line-through; }
+
+    .choice-letter {
+      width: 25px;
+      height: 25px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid #ccc;
+      border-radius: 50%;
+      background: #f5f5f5;
+      color: #333;
+      font-size: .8rem;
+      font-weight: 700;
+    }
+
+    .choice-option.selected .choice-letter {
+      border-color: #4169e1;
+      background: #4169e1;
+      color: #fff;
+    }
+
+    .choice-text { font-size: .87rem; line-height: 1.4; }
+
+    .eliminate-choice {
+      width: 30px;
+      height: 30px;
+      display: none;
+      flex-shrink: 0;
+      border: 1px solid #bbb;
+      border-radius: 50%;
+      background: #fff;
+      color: #666;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .eliminating .eliminate-choice { display: block; }
+
+    .status {
+      min-height: 1.3rem;
+      color: #555;
+      font-size: .84rem;
+      line-height: 1.35;
+    }
+
+    .status.error { color: #b42318; }
+    .status.correct { color: #18794e; font-weight: 700; }
+
+    .test-footer {
+      min-height: 62px;
+      padding: .75rem 2rem;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      background: #2c3e50;
+      color: #fff;
+    }
+
+    .footer-user { font-size: .9rem; font-weight: 500; }
+
+    .question-indicator {
+      padding: .5rem .85rem;
+      border-radius: 20px;
+      background: #1a1a1a;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+
+    .submit-btn {
+      justify-self: end;
+      padding: .55rem 1.3rem;
+      border: 0;
+      border-radius: 20px;
+      background: #4169e1;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .submit-btn:hover:not(:disabled) { background: #365ec7; }
+    .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    @media (max-width: 768px) {
+      body { min-height: 100vh; height: auto; overflow: auto; }
+      .test-header { padding: .8rem 1rem; grid-template-columns: 1fr auto; }
+      .header-date { display: none; }
+      .test-content { display: flex; flex-direction: column; }
+      .vertical-divider { display: none; }
+      .question-area { min-height: 42vh; padding: 1.35rem; }
+      .answer-sidebar { border-top: 2px solid #d0d0d0; padding: 1.25rem; }
+      .test-footer { position: sticky; bottom: 0; padding: .75rem 1rem; }
+      .question-indicator { display: none; }
     }
   </style>
 </head>
 <body>
+  <header class="test-header">
+    <div class="section-title">SAT Question of the Day</div>
+    <div class="header-date" id="dateDisplay"></div>
+    <div class="user-profile" id="userProfile"></div>
+  </header>
 
-  <div class="floating-marks" id="marks"></div>
+  <div class="practice-banner">MAYO'S DAILY SAT PRACTICE</div>
+  <div class="dotted-border"></div>
 
-  <div class="content">
-    <div class="brand">MAYO'S</div>
-    <h1 class="title">SAT Question of the Day</h1>
-    <p class="subtitle" id="date-display"></p>
-    <p class="date" id="current-date" style="font-size: 1.2rem; color: #5a6a8a; margin: 1rem 0;"></p>
-    
-    <div class="hourglass-container">
-      <div class="hourglass">
-        <div class="hourglass-top">
-          <div class="sand sand-top"></div>
-        </div>
-        <div class="hourglass-bottom">
-          <div class="sand sand-bottom"></div>
+  <main class="test-content" id="testContent">
+    <section class="question-area">
+      <div class="question-content">
+        <div class="question-kicker">Question passage</div>
+        <div id="questionStimulus">Loading today’s question…</div>
+        <img class="question-image" id="questionImage" alt="" hidden>
+      </div>
+    </section>
+
+    <div class="vertical-divider" id="divider"></div>
+
+    <aside class="answer-sidebar" id="answerSidebar">
+      <div class="question-header-section">
+        <span class="question-number-badge">1</span>
+        <div class="tools">
+          <button class="tool-btn" id="bookmarkBtn" type="button">♡ Mark for Review</button>
+          <button class="tool-btn eliminator" id="eliminatorBtn" type="button">ABC</button>
         </div>
       </div>
-    </div>
-    
-    <div class="time-display" id="time-display">1:20</div>
-    <button id="ready-btn" class="btn-3d">I'm Ready</button>
-  </div>
+      <div class="divider-line"></div>
+      <div class="question-prompt" id="questionPrompt">Loading…</div>
+      <div class="answer-choices" id="answerChoices"></div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </aside>
+  </main>
+
+  <div class="dotted-border"></div>
+  <footer class="test-footer">
+    <div class="footer-user" id="footerUser">Loading…</div>
+    <div class="question-indicator">Question 1 of 1</div>
+    <button class="submit-btn" id="submitBtn" type="button" disabled>Submit Answer</button>
+  </footer>
 
   <script>
-    const container = document.getElementById('marks');
-    
-    // Function to create a new question mark
-    function createQuestionMark() {
-      const mark = document.createElement('div');
-      mark.className = 'question-mark';
-      mark.textContent = '?';
-      
-      // Set random horizontal position
-      mark.style.left = Math.random() * 100 + '%';
-      
-      // Set random size
-      mark.style.fontSize = (Math.random() * 1.5 + 1.8) + 'rem';
-      
-      // Set random animation duration (longer for more gradual movement)
-      const duration = Math.random() * 20 + 15;
-      mark.style.animationDuration = duration + 's';
-      
-      // Set random animation delay to create staggered effect
-      const delay = Math.random() * 5;
-      mark.style.animationDelay = delay + 's';
-      
-      // Add horizontal movement
-      const horizontalOffset = (Math.random() * 100 - 50) + 'px';
-      mark.style.setProperty('--horizontal-offset', horizontalOffset);
-      
-      // Add to container
-      container.appendChild(mark);
-      
-      // Remove the element after animation completes to keep the stream going
-      setTimeout(() => {
-        if (mark.parentNode) {
-          mark.parentNode.removeChild(mark);
-        }
-      }, duration * 1000);
-    }
-    
-    // Create initial question marks
-    for (let i = 0; i < 15; i++) {
-      createQuestionMark();
-    }
-    
-    // Create new question marks at regular intervals to maintain infinite stream
-    setInterval(() => {
-      createQuestionMark();
-    }, 300);
-    
-    // Set today's date
-    const today = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const formattedDate = today.toLocaleDateString('en-US', options);
-    document.getElementById('date-display').textContent = formattedDate;
-    
-    // Timer functionality
-    let timeLeft = 80; // 1 minute 20 seconds = 80 seconds
-    const timeDisplay = document.getElementById('time-display');
-    const readyBtn = document.getElementById('ready-btn');
-    
-    // Update timer display
-    function updateTimer() {
-      const minutes = Math.floor(timeLeft / 60);
-      const seconds = timeLeft % 60;
-      timeDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-      
-      if (timeLeft <= 0) {
-        clearInterval(timer);
-        timeDisplay.textContent = "Time's up!";
-        readyBtn.disabled = true;
+    const fallbackQuestion = {
+      id: 'demo-question',
+      stimulus: 'Today’s SAT question will appear here after you add it to the Supabase questions table.',
+      prompt: 'Which choice best answers the question?',
+      choices: [
+        { label: 'A', text: 'Answer choice A' },
+        { label: 'B', text: 'Answer choice B' },
+        { label: 'C', text: 'Answer choice C' },
+        { label: 'D', text: 'Answer choice D' }
+      ],
+      imageUrl: null,
+      demo: true
+    };
+
+    let currentQuestion = null;
+    let selectedAnswer = null;
+
+    const escapeHtml = (value) => {
+      const node = document.createElement('span');
+      node.textContent = value ?? '';
+      return node.innerHTML;
+    };
+
+    async function loadUser() {
+      if (new URLSearchParams(window.location.search).has('preview')) {
+        document.getElementById('userProfile').innerHTML =
+          '<span>Preview Student</span><div aria-hidden="true">👤</div>';
+        document.getElementById('footerUser').textContent = 'Preview Student';
         return;
       }
-      
-      timeLeft--;
-    }
-    
-    // Start the timer
-    const timer = setInterval(updateTimer, 1000);
-    updateTimer(); // Initial call
-    
-    // Ready button functionality
-    readyBtn.addEventListener('click', () => {
-      // Redirect to the question page or start the quiz
-      window.location.href = 'question.html'; // or wherever the actual question page is
-    });
-  </script>
 
+      const response = await fetch('/api/me');
+      if (!response.ok) {
+        window.location.href = '/';
+        return;
+      }
+
+      const { user } = await response.json();
+      document.getElementById('userProfile').innerHTML = `
+        <span>${escapeHtml(user.name)}</span>
+        <img src="${user.avatar}" alt="${escapeHtml(user.name)}'s Discord avatar">
+      `;
+      document.getElementById('footerUser').textContent = user.name;
+    }
+
+    async function loadQuestion() {
+      try {
+        const response = await fetch('/api/question/today');
+        if (!response.ok) throw new Error('No daily question');
+        const { question } = await response.json();
+        renderQuestion(question);
+      } catch {
+        renderQuestion(fallbackQuestion);
+        setStatus('Add today’s question in Supabase to replace this preview.', 'error');
+      }
+    }
+
+    function renderQuestion(question) {
+      currentQuestion = question;
+      document.getElementById('questionStimulus').textContent = question.stimulus;
+      document.getElementById('questionPrompt').textContent = question.prompt;
+
+      const image = document.getElementById('questionImage');
+      if (question.imageUrl) {
+        image.src = question.imageUrl;
+        image.alt = 'Question figure';
+        image.hidden = false;
+      }
+
+      const choices = document.getElementById('answerChoices');
+      choices.innerHTML = '';
+      question.choices.forEach((choice) => {
+        const row = document.createElement('div');
+        row.className = 'choice-row';
+        row.innerHTML = `
+          <button class="choice-option" type="button" data-answer="${escapeHtml(choice.label)}">
+            <span class="choice-letter">${escapeHtml(choice.label)}</span>
+            <span class="choice-text">${escapeHtml(choice.text)}</span>
+          </button>
+          <button class="eliminate-choice" type="button" aria-label="Eliminate ${escapeHtml(choice.label)}">×</button>
+        `;
+
+        const option = row.querySelector('.choice-option');
+        option.addEventListener('click', () => selectAnswer(option, choice.label));
+        row.querySelector('.eliminate-choice').addEventListener('click', () => {
+          option.classList.toggle('eliminated');
+          if (selectedAnswer === choice.label) {
+            selectedAnswer = null;
+            option.classList.remove('selected');
+            document.getElementById('submitBtn').disabled = true;
+          }
+        });
+        choices.appendChild(row);
+      });
+    }
+
+    function selectAnswer(option, answer) {
+      if (option.classList.contains('eliminated')) return;
+      document.querySelectorAll('.choice-option').forEach((item) => item.classList.remove('selected'));
+      option.classList.add('selected');
+      selectedAnswer = answer;
+      document.getElementById('submitBtn').disabled = false;
+      setStatus('');
+    }
+
+    function setStatus(message, type = '') {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = `status ${type}`.trim();
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      if (!selectedAnswer || currentQuestion.demo) {
+        setStatus('This preview question cannot be submitted yet.', 'error');
+        return;
+      }
+
+      const button = document.getElementById('submitBtn');
+      button.disabled = true;
+      setStatus('Saving your answer…');
+
+      try {
+        const response = await fetch('/api/answers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            questionId: currentQuestion.id,
+            answer: selectedAnswer
+          })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not submit answer');
+
+        setStatus(
+          result.correct
+            ? `Correct! +${result.pointsAwarded} points`
+            : `Incorrect. The correct answer was ${result.correctAnswer}.`,
+          result.correct ? 'correct' : 'error'
+        );
+        document.querySelectorAll('.choice-option, .eliminate-choice')
+          .forEach((item) => { item.disabled = true; });
+      } catch (error) {
+        setStatus(error.message, 'error');
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('bookmarkBtn').addEventListener('click', (event) => {
+      event.currentTarget.classList.toggle('active');
+      event.currentTarget.textContent =
+        event.currentTarget.classList.contains('active')
+          ? '♥ Marked for Review'
+          : '♡ Mark for Review';
+    });
+
+    document.getElementById('eliminatorBtn').addEventListener('click', () => {
+      document.getElementById('answerSidebar').classList.toggle('eliminating');
+    });
+
+    let dragging = false;
+    const divider = document.getElementById('divider');
+    const testContent = document.getElementById('testContent');
+    divider.addEventListener('mousedown', () => { dragging = true; });
+    document.addEventListener('mouseup', () => { dragging = false; });
+    document.addEventListener('mousemove', (event) => {
+      if (!dragging || window.innerWidth <= 768) return;
+      const bounds = testContent.getBoundingClientRect();
+      const leftWidth = event.clientX - bounds.left;
+      if (leftWidth > bounds.width * .25 && leftWidth < bounds.width * .75) {
+        testContent.style.gridTemplateColumns =
+          `${leftWidth}px 4px ${bounds.width - leftWidth - 4}px`;
+      }
+    });
+
+    document.getElementById('dateDisplay').textContent =
+      new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric'
+      });
+
+    Promise.all([loadUser(), loadQuestion()]);
+  </script>
 </body>
 </html>

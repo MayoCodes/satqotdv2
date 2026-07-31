@@ -12,12 +12,21 @@ create table if not exists public.users (
 
 create table if not exists public.questions (
   id text primary key,
-  prompt text not null,
+  stimulus text not null,
+  question_prompt text not null,
+  choices jsonb not null check (jsonb_typeof(choices) = 'array'),
+  image_url text,
   expected_answer text not null,
   points integer not null default 100 check (points >= 0),
   active_date date unique,
   created_at timestamptz not null default now()
 );
+
+-- Safe upgrade path if an earlier version of this schema was already run.
+alter table public.questions add column if not exists stimulus text;
+alter table public.questions add column if not exists question_prompt text;
+alter table public.questions add column if not exists choices jsonb;
+alter table public.questions add column if not exists image_url text;
 
 create table if not exists public.attempts (
   id bigint generated always as identity primary key,
@@ -111,5 +120,15 @@ revoke all on function public.submit_answer(text, text, text) from public;
 grant execute on function public.submit_answer(text, text, text) to service_role;
 
 -- Example question (replace with your real SAT question):
--- insert into public.questions (id, prompt, expected_answer, points, active_date)
--- values ('2026-07-30', 'What is 2 + 2?', '4', 100, '2026-07-30');
+-- insert into public.questions (
+--   id, stimulus, question_prompt, choices, expected_answer, points, active_date
+-- )
+-- values (
+--   '2026-07-30',
+--   'If 3x + 2 = 14, what is the value of x?',
+--   'Which choice is the correct answer?',
+--   '[{"label":"A","text":"2"},{"label":"B","text":"3"},{"label":"C","text":"4"},{"label":"D","text":"6"}]',
+--   'C',
+--   100,
+--   '2026-07-30'
+-- );

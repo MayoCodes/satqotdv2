@@ -222,6 +222,42 @@ app.get('/api/leaderboard', async (req, res) => {
   res.json({ leaderboard: data });
 });
 
+app.get('/api/question/today', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Database is not configured' });
+
+  const dateParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .formatToParts(new Date())
+    .reduce((parts, part) => ({ ...parts, [part.type]: part.value }), {});
+  const today = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+
+  const { data, error } = await supabase
+    .from('questions')
+    .select('id, stimulus, question_prompt, choices, image_url')
+    .eq('active_date', today)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Question query failed:', error.message);
+    return res.status(500).json({ error: 'Could not load today’s question' });
+  }
+  if (!data) return res.status(404).json({ error: 'No question is scheduled for today' });
+
+  res.json({
+    question: {
+      id: data.id,
+      stimulus: data.stimulus,
+      prompt: data.question_prompt,
+      choices: data.choices,
+      imageUrl: data.image_url,
+    },
+  });
+});
+
 app.post('/api/answers', async (req, res) => {
   const session = readSession(req);
   if (!session) return res.status(401).json({ error: 'Log in before answering' });
