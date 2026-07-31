@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mayo's SAT QOTD - Question</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #f5f0d8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive, sans-serif;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Floating question marks container */
+    .floating-marks {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .question-mark {
+      position: absolute;
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: rgba(180, 180, 200, 0.5);
+      animation: floatUp linear infinite;
+      font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
+      /* Start from random positions */
+      top: 100vh;
+      left: 0;
+    }
+
+    @keyframes floatUp {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0.3;
+      }
+      10% {
+        opacity: 0.7;
+      }
+      90% {
+        opacity: 0.5;
+      }
+      100% {
+        transform: translateY(-100vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    /* Main content */
+    .content {
+      text-align: center;
+      position: relative;
+      z-index: 10;
+      max-width: 700px;
+      width: 90%;
+      padding: 2rem;
+    }
+
+    .brand {
+      font-size: 1.8rem;
+      color: #2c5aa0;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-bottom: 1rem;
+      display: inline-block;
+      transform: rotate(-2deg);
+    }
+
+    .title {
+      font-size: 4.5rem;
+      color: #1a2b5e;
+      font-weight: bold;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.4rem;
+      color: #5a6a8a;
+      margin-bottom: 3rem;
+      line-height: 1.4;
+    }
+
+    /* Hourglass animation */
+    .hourglass-container {
+      margin: 2rem 0;
+      position: relative;
+      width: 200px;
+      height: 300px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hourglass {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      perspective: 1000px;
+    }
+
+    .hourglass-top, .hourglass-bottom {
+      position: absolute;
+      width: 100%;
+      height: 50%;
+      background: #2c5aa0;
+      border-radius: 50% 50% 0 0 / 50% 50% 0 0;
+      overflow: hidden;
+    }
+
+    .hourglass-top {
+      top: 0;
+      border-bottom: 2px solid #1a3a7a;
+    }
+
+    .hourglass-bottom {
+      bottom: 0;
+      border-top: 2px solid #1a3a7a;
+      border-radius: 0 0 50% 50% / 0 0 50% 50%;
+    }
+
+    .sand {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #f5f0d8;
+      border-radius: 50% 50% 0 0 / 50% 50% 0 0;
+      animation: sand-fall 80s linear infinite;
+    }
+
+    .sand-top {
+      top: 0;
+      border-radius: 50% 50% 0 0 / 50% 50% 0 0;
+    }
+
+    .sand-bottom {
+      bottom: 0;
+      border-radius: 0 0 50% 50% / 0 0 50% 50%;
+    }
+
+    @keyframes sand-fall {
+      0% {
+        transform: translateY(0);
+      }
+      100% {
+        transform: translateY(100%);
+      }
+    }
+
+    .time-display {
+      font-size: 2rem;
+      color: #1a2b5e;
+      font-weight: bold;
+      margin: 2rem 0;
+    }
+
+    /* 3D Cartoony Button */
+    .btn-3d {
+      display: inline-block;
+      background: #2c5aa0;
+      color: #fff;
+      font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
+      font-size: 1.6rem;
+      font-weight: bold;
+      padding: 18px 50px;
+      border-radius: 16px;
+      border: 3px solid #1a3a7a;
+      box-shadow:
+        0 10px 0 #1a3a7a,
+        0 14px 20px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.1s ease;
+      letter-spacing: 1px;
+      margin-top: 2rem;
+    }
+
+    .btn-3d:hover {
+      background: #3a6ab0;
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 0 #1a3a7a,
+        0 18px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-3d:active {
+      transform: translateY(8px);
+      box-shadow:
+        0 2px 0 #1a3a7a,
+        0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 600px) {
+      .title {
+        font-size: 2.8rem;
+      }
+      .brand {
+        font-size: 1.4rem;
+      }
+      .subtitle {
+        font-size: 1.1rem;
+      }
+      .btn-3d {
+        font-size: 1.3rem;
+        padding: 14px 36px;
+      }
+      .hourglass-container {
+        width: 150px;
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="floating-marks" id="marks"></div>
+
+  <div class="content">
+    <div class="brand">MAYO'S</div>
+    <h1 class="title">SAT Question of the Day</h1>
+    <p class="subtitle" id="date-display"></p>
+    <p class="date" id="current-date" style="font-size: 1.2rem; color: #5a6a8a; margin: 1rem 0;"></p>
+    
+    <div class="hourglass-container">
+      <div class="hourglass">
+        <div class="hourglass-top">
+          <div class="sand sand-top"></div>
+        </div>
+        <div class="hourglass-bottom">
+          <div class="sand sand-bottom"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="time-display" id="time-display">1:20</div>
+    <button id="ready-btn" class="btn-3d">I'm Ready</button>
+  </div>
+
+  <script>
+    const container = document.getElementById('marks');
+    
+    // Function to create a new question mark
+    function createQuestionMark() {
+      const mark = document.createElement('div');
+      mark.className = 'question-mark';
+      mark.textContent = '?';
+      
+      // Set random horizontal position
+      mark.style.left = Math.random() * 100 + '%';
+      
+      // Set random size
+      mark.style.fontSize = (Math.random() * 1.5 + 1.8) + 'rem';
+      
+      // Set random animation duration (longer for more gradual movement)
+      const duration = Math.random() * 20 + 15;
+      mark.style.animationDuration = duration + 's';
+      
+      // Set random animation delay to create staggered effect
+      const delay = Math.random() * 5;
+      mark.style.animationDelay = delay + 's';
+      
+      // Add horizontal movement
+      const horizontalOffset = (Math.random() * 100 - 50) + 'px';
+      mark.style.setProperty('--horizontal-offset', horizontalOffset);
+      
+      // Add to container
+      container.appendChild(mark);
+      
+      // Remove the element after animation completes to keep the stream going
+      setTimeout(() => {
+        if (mark.parentNode) {
+          mark.parentNode.removeChild(mark);
+        }
+      }, duration * 1000);
+    }
+    
+    // Create initial question marks
+    for (let i = 0; i < 15; i++) {
+      createQuestionMark();
+    }
+    
+    // Create new question marks at regular intervals to maintain infinite stream
+    setInterval(() => {
+      createQuestionMark();
+    }, 300);
+    
+    // Set today's date
+    const today = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const formattedDate = today.toLocaleDateString('en-US', options);
+    document.getElementById('date-display').textContent = formattedDate;
+    
+    // Timer functionality
+    let timeLeft = 80; // 1 minute 20 seconds = 80 seconds
+    const timeDisplay = document.getElementById('time-display');
+    const readyBtn = document.getElementById('ready-btn');
+    
+    // Update timer display
+    function updateTimer() {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      timeDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        timeDisplay.textContent = "Time's up!";
+        readyBtn.disabled = true;
+        return;
+      }
+      
+      timeLeft--;
+    }
+    
+    // Start the timer
+    const timer = setInterval(updateTimer, 1000);
+    updateTimer(); // Initial call
+    
+    // Ready button functionality
+    readyBtn.addEventListener('click', () => {
+      // Redirect to the question page or start the quiz
+      window.location.href = 'question.html'; // or wherever the actual question page is
+    });
+  </script>
+
+</body>
+</html>

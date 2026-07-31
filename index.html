@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mayo's SAT QOTD</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #f5f0d8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive, sans-serif;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Floating question marks container */
+    .floating-marks {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .question-mark {
+      position: absolute;
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: rgba(180, 180, 200, 0.5);
+      animation: floatUp linear infinite;
+      font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
+      /* Start from random positions */
+      top: 100vh;
+      left: 0;
+    }
+
+    @keyframes floatUp {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0.3;
+      }
+      10% {
+        opacity: 0.7;
+      }
+      90% {
+        opacity: 0.5;
+      }
+      100% {
+        transform: translateY(-100vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    /* Main content */
+    .content {
+      text-align: center;
+      position: relative;
+      z-index: 10;
+      max-width: 700px;
+      width: 90%;
+      padding: 2rem;
+    }
+
+    .brand {
+      font-size: 1.8rem;
+      color: #2c5aa0;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-bottom: 1rem;
+      display: inline-block;
+      transform: rotate(-2deg);
+    }
+
+    .title {
+      font-size: 4.5rem;
+      color: #1a2b5e;
+      font-weight: bold;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.4rem;
+      color: #5a6a8a;
+      margin-bottom: 3rem;
+      line-height: 1.4;
+    }
+
+    /* 3D Cartoony Button */
+    .btn-3d {
+      display: inline-block;
+      background: #2c5aa0;
+      color: #fff;
+      font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
+      font-size: 1.6rem;
+      font-weight: bold;
+      padding: 18px 50px;
+      border-radius: 16px;
+      border: 3px solid #1a3a7a;
+      box-shadow:
+        0 10px 0 #1a3a7a,
+        0 14px 20px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.1s ease;
+      letter-spacing: 1px;
+    }
+
+    .btn-3d:hover {
+      background: #3a6ab0;
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 0 #1a3a7a,
+        0 18px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-3d:active {
+      transform: translateY(8px);
+      box-shadow:
+        0 2px 0 #1a3a7a,
+        0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* User profile in top right corner */
+    .user-profile {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 8px 12px 8px 8px;
+      border-radius: 20px;
+      font-weight: bold;
+      color: #1a2b5e;
+      z-index: 20;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      align-items: center;
+      gap: 9px;
+    }
+
+    .user-profile img {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .logout-btn {
+      border: 0;
+      background: transparent;
+      color: #5a6a8a;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.75rem;
+      text-decoration: underline;
+    }
+
+    .login-error {
+      color: #9b2c2c;
+      margin-top: 1.25rem;
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      .title {
+        font-size: 2.8rem;
+      }
+      .brand {
+        font-size: 1.4rem;
+      }
+      .subtitle {
+        font-size: 1.1rem;
+      }
+      .btn-3d {
+        font-size: 1.3rem;
+        padding: 14px 36px;
+      }
+      .user-profile {
+        top: 10px;
+        right: 10px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="floating-marks" id="marks"></div>
+
+  <!-- User profile display in top right corner -->
+  <div id="user-profile" class="user-profile" style="display: none;"></div>
+
+  <div class="content">
+    <div class="brand">MAYO'S</div>
+    <h1 class="title">SAT Question of the Day</h1>
+    <p class="subtitle" id="date-display"></p>
+    <p class="date" id="current-date" style="font-size: 1.2rem; color: #5a6a8a; margin: 1rem 0;"></p>
+    <button id="get-started-btn" class="btn-3d">Get Started</button>
+  </div>
+
+  <script>
+    const container = document.getElementById('marks');
+
+    // Function to create a new question mark
+    function createQuestionMark() {
+      const mark = document.createElement('div');
+      mark.className = 'question-mark';
+      mark.textContent = '?';
+
+      // Set random horizontal position
+      mark.style.left = Math.random() * 100 + '%';
+
+      // Set random size
+      mark.style.fontSize = (Math.random() * 1.5 + 1.8) + 'rem';
+
+      // Set random animation duration (longer for more gradual movement)
+      const duration = Math.random() * 20 + 15;
+      mark.style.animationDuration = duration + 's';
+
+      // Set random animation delay to create staggered effect
+      const delay = Math.random() * 5;
+      mark.style.animationDelay = delay + 's';
+
+      // Add horizontal movement
+      const horizontalOffset = (Math.random() * 100 - 50) + 'px';
+      mark.style.setProperty('--horizontal-offset', horizontalOffset);
+
+      // Add to container
+      container.appendChild(mark);
+
+      // Remove the element after animation completes to keep the stream going
+      setTimeout(() => {
+        if (mark.parentNode) {
+          mark.parentNode.removeChild(mark);
+        }
+      }, duration * 1000);
+    }
+
+    // Create initial question marks
+    for (let i = 0; i < 15; i++) {
+      createQuestionMark();
+    }
+
+    // Create new question marks at regular intervals to maintain infinite stream
+    setInterval(() => {
+      createQuestionMark();
+    }, 300);
+
+    // Set today's date
+    const today = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const formattedDate = today.toLocaleDateString('en-US', options);
+    document.getElementById('date-display').textContent = formattedDate;
+
+    // Check the signed server session.
+    const checkUserStatus = async () => {
+      try {
+        const response = await fetch('/api/me');
+        if (response.ok) {
+          const { user } = await response.json();
+          displayWelcomeMessage(user);
+          return;
+        }
+      } catch (error) {
+        console.error('Could not check login status:', error);
+      }
+      showGetStartedButton();
+    };
+
+    // Show get started button
+    const showGetStartedButton = () => {
+      const content = document.querySelector('.content');
+      content.innerHTML = `
+        <div class="brand">MAYO'S</div>
+        <h1 class="title">SAT Question of the Day</h1>
+        <p class="subtitle" id="date-display"></p>
+        <p class="date" id="current-date" style="font-size: 1.2rem; color: #5a6a8a; margin: 1rem 0;"></p>
+        <a href="/auth/discord" class="btn-3d">Log in with Discord</a>
+        ${new URLSearchParams(window.location.search).has('login_error')
+          ? '<p class="login-error">Discord login failed. Please try again.</p>'
+          : ''}
+      `;
+    };
+
+    // Display welcome message and user profile
+    const displayWelcomeMessage = (user) => {
+      const content = document.querySelector('.content');
+      content.innerHTML = `
+        <div class="brand">MAYO'S</div>
+        <h1 class="title">SAT Question of the Day</h1>
+        <p class="subtitle" id="date-display"></p>
+        <p class="date" id="current-date" style="font-size: 1.2rem; color: #5a6a8a; margin: 1rem 0;"></p>
+        <button id="get-started-btn" class="btn-3d">Get Started</button>
+      `;
+
+      // Add event listener to the button to redirect to qotd.html
+      document.getElementById('get-started-btn').addEventListener('click', () => {
+        window.location.href = 'qotd.html';
+      });
+
+      // Show user profile in top right corner
+      const userProfile = document.getElementById('user-profile');
+      userProfile.innerHTML = `
+        <img src="${user.avatar}" alt="">
+        <span>HI, ${escapeHtml(user.name)}</span>
+        <button class="logout-btn" id="logout-btn">Log out</button>
+      `;
+      userProfile.style.display = 'flex';
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        await fetch('/auth/logout', { method: 'POST' });
+        window.location.reload();
+      });
+    };
+
+    const escapeHtml = (value) => {
+      const element = document.createElement('span');
+      element.textContent = value;
+      return element.innerHTML;
+    };
+
+    // Initialize when page loads
+    window.addEventListener('DOMContentLoaded', checkUserStatus);
+  </script>
+
+</body>
+</html>

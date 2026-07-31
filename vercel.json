@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/auth/:path*",
+      "destination": "/api"
+    },
+    {
+      "source": "/api/me",
+      "destination": "/api"
+    }
+  ]
+}
