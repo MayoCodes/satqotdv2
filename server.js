@@ -108,6 +108,18 @@ function discordAvatar(user) {
   return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
 }
 
+function getEasternDate() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .formatToParts(new Date())
+    .reduce((values, part) => ({ ...values, [part.type]: part.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 function adminKeyIsValid(req) {
   const configuredKey = process.env.DEV_ADMIN_KEY;
   const providedKey = req.get('x-admin-key');
@@ -255,6 +267,36 @@ app.get('/api/leaderboard', async (req, res) => {
   res.json({ leaderboard: data });
 });
 
+app.get('/api/question/today/status', async (req, res) => {
+  const session = readSession(req);
+  if (!session) return res.status(401).json({ error: 'Log in first' });
+  if (!supabase) return res.status(503).json({ error: 'Database is not configured' });
+
+  const { data: question, error: questionError } = await supabase
+    .from('questions')
+    .select('id')
+    .eq('active_date', getEasternDate())
+    .maybeSingle();
+  if (questionError) {
+    console.error('Question status lookup failed:', questionError.message);
+    return res.status(500).json({ error: 'Could not check today’s question' });
+  }
+  if (!question) return res.json({ hasQuestion: false, alreadyAnswered: false });
+
+  const { data: attempt, error: attemptError } = await supabase
+    .from('attempts')
+    .select('id')
+    .eq('discord_id', session.user.id)
+    .eq('question_id', question.id)
+    .maybeSingle();
+  if (attemptError) {
+    console.error('Answer status lookup failed:', attemptError.message);
+    return res.status(500).json({ error: 'Could not check your answer status' });
+  }
+
+  res.json({ hasQuestion: true, alreadyAnswered: Boolean(attempt) });
+});
+
 app.get('/api/question/today', async (req, res) => {
   const session = readSession(req);
   if (!session) return res.status(401).json({ error: 'Log in before starting' });
@@ -266,20 +308,10 @@ app.get('/api/question/today', async (req, res) => {
     return res.status(500).json({ error: 'Could not sync your account' });
   }
 
-  const dateParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-    .formatToParts(new Date())
-    .reduce((parts, part) => ({ ...parts, [part.type]: part.value }), {});
-  const today = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
-
   const { data, error } = await supabase
     .from('questions')
     .select('id, stimulus, question_prompt, choices, image_url, timer_seconds')
-    .eq('active_date', today)
+    .eq('active_date', getEasternDate())
     .maybeSingle();
 
   if (error) {

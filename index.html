@@ -312,9 +312,7 @@
       restoreDate();
 
       // Add event listener to the button to redirect to qotd.html
-      document.getElementById('get-started-btn').addEventListener('click', () => {
-        window.location.href = 'qotd.html';
-      });
+      document.getElementById('get-started-btn').addEventListener('click', startDailyQuestion);
 
       // Show user profile in top right corner
       const userProfile = document.getElementById('user-profile');
@@ -334,6 +332,27 @@
       const element = document.createElement('span');
       element.textContent = value;
       return element.innerHTML;
+    };
+
+    const startDailyQuestion = async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      button.textContent = 'Loading…';
+
+      try {
+        const response = await fetch('/api/question/today/status');
+        if (response.ok) {
+          const status = await response.json();
+          window.location.href = status.alreadyAnswered
+            ? '/leaderboard.html'
+            : '/qotd.html';
+          return;
+        }
+      } catch (error) {
+        console.error('Could not check answer status:', error);
+      }
+
+      window.location.href = '/qotd.html';
     };
 
     // Initialize when page loads
